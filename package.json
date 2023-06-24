@@ -1,0 +1,14 @@
+{
+  "name": "trab",
+  "version": "1.0.0",
+  "description": "",
+  "main": "clients.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "node --watch server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
