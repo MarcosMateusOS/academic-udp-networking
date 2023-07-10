@@ -1,10 +1,12 @@
 import udp from "dgram";
-import { logInfos } from "./utils/logs.js";
+import { REQ_TYPES } from "./types.js";
 const server = udp.createSocket("udp4"); // Cria socket usando IPV4
 const PORT = 7788;
 
-const pacotesRecebidos = new Set();
-let numPacoteEsperado = 1;
+const descarte = false // Habilitar decarte
+const DELAY_THRESHOLD = 500; // Limite de atraso para simular congestionamento (em milissegundos)
+const PERDA_PACOTES = descarte ? 0.2 : 0; // Probabilidade de perda de ACKs
+let pacoteEsperado = 1
 
 server.on("listening", () => {
   const address = server.address();
@@ -14,34 +16,58 @@ server.on("listening", () => {
 });
 
 server.on("message", (msg, info) => {
-  const numPacote = msg.readUInt32LE(0);
-  // console.log(numPacoteEsperado);
-  // console.log(numPacote);
+  const pacote = JSON.parse(msg);
+  const numeroPacode = pacote.numero
+ 
+  
 
-  if (numPacoteEsperado === numPacote) {
-    const pacoteACK = Buffer.alloc(4);
-    pacoteACK.writeUInt32LE(numPacote, 0);
-    //setTimeout(() => {
-    server.send(
-      pacoteACK,
-      0,
-      pacoteACK.length,
-      info.port,
-      "localhost",
-      (error) => {
-        if (error) {
-          console.log(error);
-          server.close();
-        }
-        pacotesRecebidos.add(numPacote);
-        numPacoteEsperado++;
-        console.log("Pacote recebido | Enviando ACK:", numPacote);
+  if (pacote.tipo === REQ_TYPES.REQ && pacoteEsperado === numeroPacode) {
+    const message = {
+      numero: pacote.numero,
+      tipo: REQ_TYPES.ACK,
+    };
+
+    const ackResponse = Buffer.from(JSON.stringify(message));
+    const randDelay = Math.random() * DELAY_THRESHOLD;
+
+    setTimeout(() => {
+      const descarte = Math.random() < PERDA_PACOTES;
+
+      if (!descarte) {
+        server.send(
+          ackResponse,
+          0,
+          ackResponse.length,
+          info.port,
+          info.address,
+          (error) => {
+            if (error) {
+              console.log(error);
+              server.close();
+            } else {
+              console.log(`Pacote recebido ${pacote.numero} | ACK enviado`);
+            }
+          }
+        );
+      } else {
+        console.log("Perda de pacote...");
       }
-    );
-    //}, 500);
-  } else {
-    console.log("Pacote duplicado");
-    console.log("Descartando: ", numPacote);
+      pacoteEsperado++
+    }, randDelay);
+  }else {
+    console.log("Pacote fora de ordem ou duplicado. Descartando pacote:", numeroPacode);
+
+    // Enviar ACK para o último pacote esperado
+    const ackPacket = {
+      numero: pacoteEsperado - 1, // ACK para o último pacote esperado
+      tipo: REQ_TYPES.ACK,
+    };
+    const ackResponse = Buffer.from(JSON.stringify(ackPacket));
+    const ack = Buffer.from(JSON.stringify(ackPacket));
+
+    server.send(ack, 0,  ackResponse.length,
+      info.port,
+      info.address);
   }
 });
 
