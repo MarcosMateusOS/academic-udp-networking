@@ -1,5 +1,6 @@
 import udp from "dgram";
 import { REQ_TYPES } from "./types.js";
+import {readFileSync} from 'fs'
 const client = udp.createSocket("udp4"); // Cria socket usando IPV4
 const PORT = 7788;
 
@@ -16,13 +17,18 @@ let pacotesNConfirmados = 0;
 let numSequencia = 0
 let bufferRemetente = []; // Buffer do remetente
 
+const caminhoArquivo = './arquivo.txt'; // Caminho para o arquivo de texto
+
+// Ler o conteúdo do arquivo em um buffer
+const conteudoArquivo = readFileSync(caminhoArquivo);
+
 
 async function envio(numPacote) {
   numSequencia = numPacote;
 
   const message = {
     numero: numPacote,
-    body: `Body: ${numPacote}`,
+    body: conteudoArquivo.toString(),
     tipo: REQ_TYPES.REQ,
   };
 
@@ -135,7 +141,7 @@ function enviarPacotes(numPacote) {
   setTimeout(async () => {
     await envio(numPacote);
     enviarPacotes(numPacote + 1);
-  }, 500 * 10 - 1);
+  }, pacotesEnviados * 1000 - 1);
 }
 
 enviarPacotes(1);
