@@ -16,19 +16,20 @@ let pacotesConfirmados = 0;
 let pacotesNConfirmados = 0;
 let numSequencia = 0
 let bufferRemetente = []; // Buffer do remetente
-
+const tamanhoPacote = 1024 //Bytes
+const controle = true // Ativa controle de congestionamento
 const caminhoArquivo = './arquivo.txt'; // Caminho para o arquivo de texto
 
 // Ler o conteúdo do arquivo em um buffer
 const conteudoArquivo = readFileSync(caminhoArquivo);
 
 
-async function envio(numPacote) {
+async function envio(numPacote, conteudo) {
   numSequencia = numPacote;
 
   const message = {
     numero: numPacote,
-    body: conteudoArquivo.toString(),
+    body: conteudo.toString(),
     tipo: REQ_TYPES.REQ,
   };
 
@@ -74,7 +75,14 @@ function confirmarPacote(numPacote) {
     (obj) => obj.numPacote === numPacote
   );
 
-  if (pacoteIndex !== -1) {
+  if(!controle)  {
+    // Apenas confirma o pacote e 
+    // não faz nenhum tratamento pois os controle de congestionamento está desativado
+    bufferRemetente[pacoteIndex].confirmado = true
+    return
+  }
+
+  if (pacoteIndex !== -1 && controle) {
     const pacote = bufferRemetente[pacoteIndex];
 
     if (isCongestionAvoidance && pacote.confirmado) {
@@ -90,7 +98,6 @@ function confirmarPacote(numPacote) {
 
         console.log('Ativando Slow Start')
         isSlowStart = true;
-        numPacotesEnviados = 0;
       }
     }else if(isCongestionAvoidance){
       JANELA_ENVIO += 1;
@@ -131,17 +138,17 @@ client.on("message", (msg) => {
   confirmarPacote(ackPacketNumber);
 });
 
+
+const tamanhoTotal = Math.ceil(conteudoArquivo.length / tamanhoPacote);
 function enviarPacotes(numPacote) {
-  if (numPacote > 100) {
-    console.log("Finalizado!");
-    return;
-  }
-
-
+  if(numPacote === tamanhoTotal) return
   setTimeout(async () => {
-    await envio(numPacote);
-    enviarPacotes(numPacote + 1);
-  }, pacotesEnviados * 1000 - 1);
-}
+    const inicio = numPacote * tamanhoPacote;
+    const fim = Math.min((numPacote + 1) * tamanhoPacote, conteudoArquivo.length);
+    const pacote = conteudoArquivo.slice(inicio, fim);
 
-enviarPacotes(1);
+    await envio(numPacote, pacote);
+    enviarPacotes(numPacote + 1);
+  }, 500);
+}
+enviarPacotes(1)
