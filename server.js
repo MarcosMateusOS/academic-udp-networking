@@ -3,7 +3,7 @@ import { REQ_TYPES } from "./types.js";
 const server = udp.createSocket("udp4"); // Cria socket usando IPV4
 const PORT = 7788;
 import {writeFileSync, appendFileSync} from 'fs'
-const descarte = true // Habilitar decarte
+const descarte = false // Habilitar decarte
 const DELAY_THRESHOLD = 500; // Limite de atraso para simular congestionamento (em milissegundos)
 const PERDA_PACOTES = descarte ? 0.2 : 0; // Probabilidade de perda de ACKs
 let pacoteEsperado = 1
@@ -26,7 +26,7 @@ server.on("message", (msg, info) => {
  
   
 
-  if (pacote.tipo === REQ_TYPES.REQ && ((pacoteEsperado === numeroPacode && descarte))) {
+  if (pacote.tipo === REQ_TYPES.REQ && ((pacoteEsperado === numeroPacode && descarte) || !descarte)) {
     const message = {
       numero: pacote.numero,
       tipo: REQ_TYPES.ACK,

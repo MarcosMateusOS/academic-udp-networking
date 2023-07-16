@@ -18,11 +18,6 @@ let numSequencia = 0
 let bufferRemetente = []; // Buffer do remetente
 const tamanhoPacote = 1024 //Bytes
 const controle = true // Ativa controle de congestionamento
-const caminhoArquivo = './arquivo.txt'; // Caminho para o arquivo de texto
-
-// Ler o conteúdo do arquivo em um buffer
-const conteudoArquivo = readFileSync(caminhoArquivo);
-
 
 async function envio(numPacote, conteudo) {
   numSequencia = numPacote;
@@ -138,6 +133,10 @@ client.on("message", (msg) => {
   confirmarPacote(ackPacketNumber);
 });
 
+// Caminho para o arquivo de texto
+const caminhoArquivo = './arquivo.txt'; 
+// Le o conteúdo do arquivo em um buffer
+const conteudoArquivo = readFileSync(caminhoArquivo);
 
 const tamanhoTotal = Math.ceil(conteudoArquivo.length / tamanhoPacote);
 function enviarPacotes(numPacote) {
@@ -151,4 +150,5 @@ function enviarPacotes(numPacote) {
     enviarPacotes(numPacote + 1);
   }, 500);
 }
+
 enviarPacotes(1)
